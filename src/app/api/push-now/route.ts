@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { message_type } = body;
 
-  if (!message_type || ![1, 2, 3].includes(message_type)) {
+  if (!message_type || ![1, 2, 3, 4].includes(message_type)) {
     return NextResponse.json(
       { error: "Invalid message_type" },
       { status: 400 }

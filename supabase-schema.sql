@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS robot_config (
 -- 3. 消息模板表
 CREATE TABLE IF NOT EXISTS message_templates (
   id SERIAL PRIMARY KEY,
-  message_type INTEGER NOT NULL UNIQUE CHECK (message_type IN (1, 2, 3)),
+  message_type INTEGER NOT NULL UNIQUE CHECK (message_type IN (1, 2, 3, 4)),
   template_content TEXT NOT NULL,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS message_templates (
 -- 4. 推送时间配置表
 CREATE TABLE IF NOT EXISTS push_time_config (
   id SERIAL PRIMARY KEY,
-  message_type INTEGER NOT NULL UNIQUE CHECK (message_type IN (1, 2, 3)),
+  message_type INTEGER NOT NULL UNIQUE CHECK (message_type IN (1, 2, 3, 4)),
   robot_id INTEGER REFERENCES robot_config(id) ON DELETE SET NULL,
   hour INTEGER NOT NULL CHECK (hour >= 0 AND hour <= 23),
   minute INTEGER NOT NULL CHECK (minute >= 0 AND minute <= 59),
@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS push_time_config (
 -- 5. @成员配置表
 CREATE TABLE IF NOT EXISTS members (
   id SERIAL PRIMARY KEY,
-  message_type INTEGER NOT NULL CHECK (message_type IN (1, 2, 3)),
+  message_type INTEGER NOT NULL CHECK (message_type IN (1, 2, 3, 4)),
   member_name VARCHAR(100) NOT NULL,
   userid VARCHAR(100) NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS members (
 -- 6. 推送日志表
 CREATE TABLE IF NOT EXISTS push_logs (
   id SERIAL PRIMARY KEY,
-  message_type INTEGER NOT NULL CHECK (message_type IN (1, 2, 3)),
+  message_type INTEGER NOT NULL CHECK (message_type IN (1, 2, 3, 4)),
   iteration_number VARCHAR(10),
   content TEXT NOT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'success' CHECK (status IN ('success', 'failed', 'preview', 'retrying')),
@@ -163,7 +163,8 @@ CREATE TRIGGER update_system_config_updated_at BEFORE UPDATE ON system_config FO
 INSERT INTO message_templates (message_type, template_content) VALUES
 (1, '【{发版日日期}联合规划会需求收集提醒】@ALL\n\n{发版日日期}迭代联合规划会计划在{规划会日期}召开，请大家提前准备好需求文档。\n\n禅道需求：{CHANZHOU_URL}/execution-story-{禅道编号}.html'),
 (2, '【{发版日日期}迭代进度更新提醒】@ALL\n\n请各位负责人及时更新{发版日日期}迭代的需求进度状态（开发中/测试中/已完成）。\n\n禅道需求：{CHANZHOU_URL}/execution-story-{禅道编号}.html'),
-(3, '【{发版日日期}发版后状态更新提醒】@ALL\n\n{发版日日期}已发版，请各负责人确认需求上线状态，及时关闭已完成需求。\n\n禅道需求：{CHANZHOU_URL}/execution-story-{禅道编号}.html');
+(3, '【{发版日日期}发版后状态更新提醒】@ALL\n\n{发版日日期}已发版，请各负责人确认需求上线状态，及时关闭已完成需求。\n\n禅道需求：{CHANZHOU_URL}/execution-story-{禅道编号}.html'),
+(4, '【{发版日日期}进度更新提醒】@ALL\n\n各位好，{发版日日期}迭代正在进行中，请及时更新禅道需求状态。\n\n禅道需求：{CHANZHOU_URL}/execution-story-{禅道编号}.html');
 
 -- 禅道编号配置默认值
 INSERT INTO chanzhou_config (base_iteration, base_chanzhou_num, increment) VALUES ('0526', 348, 1);
@@ -175,7 +176,8 @@ INSERT INTO preview_config (enabled, preview_lead_minutes) VALUES (false, 60);
 INSERT INTO push_time_config (message_type, hour, minute, is_active) VALUES
 (1, 10, 0, true),
 (2, 11, 0, true),
-(3, 9, 15, true);
+(3, 9, 15, true),
+(4, 10, 0, true);
 
 -- 系统配置默认值（{CHANZHOU_URL} 部署时替换）
 INSERT INTO system_config (config_key, config_value, description) VALUES

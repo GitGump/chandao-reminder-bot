@@ -33,14 +33,16 @@ type PreviewConfig = {
 
 const MESSAGE_TYPE_LABELS: Record<number, string> = {
   1: "规划会提醒",
-  2: "进度更新提醒",
-  3: "发版后状态更新提醒",
+  2: "全员进度更新",
+  3: "发版后状态更新",
+  4: "部门进度更新",
 };
 
 const MESSAGE_TYPE_ICONS: Record<number, typeof Clock> = {
   1: Clock,
   2: Clock,
   3: Bell,
+  4: Clock,
 };
 
 export default function PushTimePanel() {
@@ -71,15 +73,13 @@ export default function PushTimePanel() {
         apiGet<Robot[]>("/api/robot"),
       ]);
       setConfigs(configsData);
-      // Initialize drafts from configs
+      // Initialize drafts for all message types (1-4), filling from DB or defaults
       const initDrafts: Record<number, { robot_id: number; hour: number; minute: number; is_active: boolean }> = {};
-      for (const c of configsData) {
-        initDrafts[c.message_type] = {
-          robot_id: c.robot_id,
-          hour: c.hour,
-          minute: c.minute,
-          is_active: c.is_active,
-        };
+      for (const mt of [1, 2, 3, 4]) {
+        const existing = configsData.find((c) => c.message_type === mt);
+        initDrafts[mt] = existing
+          ? { robot_id: existing.robot_id, hour: existing.hour, minute: existing.minute, is_active: existing.is_active }
+          : { robot_id: 0, hour: 10, minute: 0, is_active: false };
       }
       setDrafts(initDrafts);
       setNextPushTimes(nextTimesData);
@@ -97,7 +97,6 @@ export default function PushTimePanel() {
     fetchAll();
   }, [fetchAll]);
 
-  const getConfigByType = (messageType: number) => configs.find((c) => c.message_type === messageType);
 
   const getNextPushTime = (messageType: number) =>
     nextPushTimes.find((n) => n.message_type === messageType);
@@ -117,12 +116,24 @@ export default function PushTimePanel() {
     const draft = drafts[messageType];
     if (!draft) return;
 
-    const config = getConfigByType(messageType);
-    if (!config) return;
+    if (!draft.robot_id) {
+      alert("请选择推送机器人");
+      return;
+    }
 
     setSaving((prev) => ({ ...prev, [messageType]: true }));
     try {
-      await saveDraftToApi(messageType, config.id, draft);
+      await apiPost("/api/push-time", { message_type: messageType, ...draft });
+      // Refresh configs so config object exists for subsequent saves
+      setConfigs((prev) => {
+        const existing = prev.findIndex((c) => c.message_type === messageType);
+        if (existing >= 0) {
+          const updated = [...prev];
+          updated[existing] = { ...updated[existing], ...draft };
+          return updated;
+        }
+        return [...prev, { id: 0, message_type: messageType, ...draft }];
+      });
       setRefreshMsg(`✅ ${MESSAGE_TYPE_LABELS[messageType]} 已保存`);
       setTimeout(() => setRefreshMsg(""), 2000);
     } catch (e: unknown) {
@@ -133,40 +144,20 @@ export default function PushTimePanel() {
   };
 
   // Shared helper: save draft to API and update local configs
-  const saveDraftToApi = async (
-    messageType: number,
-    configId: number,
-    draft: { robot_id: number; hour: number; minute: number; is_active: boolean }
-  ) => {
-    await apiPost("/api/push-time", {
-      id: configId,
-      message_type: messageType,
-      robot_id: Number(draft.robot_id),
-      hour: Number(draft.hour),
-      minute: Number(draft.minute),
-      is_active: draft.is_active,
-    });
-    setConfigs((prev) =>
-      prev.map((c) =>
-        c.message_type === messageType
-          ? { ...c, robot_id: Number(draft.robot_id), hour: Number(draft.hour), minute: Number(draft.minute), is_active: draft.is_active }
-          : c
-      )
-    );
-  };
-
   const handleManualPush = async (messageType: number) => {
-    const config = getConfigByType(messageType);
-    if (!config) return;
-
     const draft = drafts[messageType];
     if (!draft) return;
+
+    if (!draft.robot_id) {
+      alert("请先选择推送机器人");
+      return;
+    }
 
     setPushing((prev) => ({ ...prev, [messageType]: true }));
     setPushResult((prev) => ({ ...prev, [messageType]: null }));
     try {
-      // 先保存当前草稿，确保推送使用最新选择的机器人
-      await saveDraftToApi(messageType, config.id, draft);
+      // 先保存当前草稿（新建或更新），确保推送使用最新配置
+      await apiPost("/api/push-time", { message_type: messageType, robot_id: Number(draft.robot_id), hour: Number(draft.hour), minute: Number(draft.minute), is_active: draft.is_active });
       const result = await apiPost("/api/push-now", { message_type: messageType });
       setPushResult((prev) => ({ ...prev, [messageType]: { success: true, content: JSON.stringify(result) } }));
       setRefreshMsg(`✅ 手动推送 ${MESSAGE_TYPE_LABELS[messageType]} 成功`);
@@ -251,15 +242,14 @@ export default function PushTimePanel() {
       )}
 
       {/* Three message type cards */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {[1, 2, 3].map((messageType) => {
-          const config = getConfigByType(messageType);
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-4 lg:grid-cols-3 md:grid-cols-2">
+        {[1, 2, 3, 4].map((messageType) => {
           const draft = drafts[messageType];
           const nextPush = getNextPushTime(messageType);
           const isSaving = saving[messageType] || false;
           const IconComp = MESSAGE_TYPE_ICONS[messageType];
 
-          if (!config || !draft) return null;
+          if (!draft) return null;
 
           return (
             <div
@@ -273,7 +263,8 @@ export default function PushTimePanel() {
                     "flex h-10 w-10 items-center justify-center rounded-lg",
                     messageType === 1 && "bg-blue-100 text-blue-600",
                     messageType === 2 && "bg-amber-100 text-amber-600",
-                    messageType === 3 && "bg-purple-100 text-purple-600"
+                    messageType === 3 && "bg-purple-100 text-purple-600",
+                    messageType === 4 && "bg-teal-100 text-teal-600"
                   )}
                 >
                   <IconComp size={20} />

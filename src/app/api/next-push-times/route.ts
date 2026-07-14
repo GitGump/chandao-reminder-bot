@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
 
   const rawConfigs = configs ?? [];
   const rawCalendars = (calendars ?? []) as { iteration_number: string; planning_date: string; release_date: string }[];
-  const messageTypes = [1, 2, 3];
+  const messageTypes = [1, 2, 3, 4];
   const results = [];
 
   for (const messageType of messageTypes) {
@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
         targetDate = new Date(iteration.planning_date);
         targetDate.setHours(0, 0, 0, 0);
       }
-    } else if (messageType === 2) {
+    } else if (messageType === 2 || messageType === 4) {
       // 进度更新提醒: use today's date
       targetDate = new Date(today);
     } else {

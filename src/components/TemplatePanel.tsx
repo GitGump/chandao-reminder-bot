@@ -24,8 +24,9 @@ interface ChanZhouConfig {
 
 const MESSAGE_TYPE_LABELS: Record<number, string> = {
   1: "规划会提醒",
-  2: "进度更新提醒",
-  3: "发版后状态更新提醒",
+  2: "全员进度更新",
+  3: "发版后状态更新",
+  4: "部门进度更新",
 };
 
 const PLACEHOLDERS = [
@@ -132,13 +133,17 @@ export default function TemplatePanel() {
         message_type: editModal.template.message_type,
         template_content: editModal.draft,
       });
-      setTemplates((prev) =>
-        prev.map((t) =>
-          t.id === editModal.template.id
-            ? { ...t, template_content: editModal.draft }
-            : t
-        )
-      );
+      setTemplates((prev) => {
+        const idx = prev.findIndex((t) => t.id === editModal.template.id);
+        const updated = { ...editModal.template, template_content: editModal.draft };
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = updated;
+          return next;
+        }
+        // 新建模板：重新拉取以获取数据库分配的 id
+        return [...prev, updated];
+      });
       showToast("success", "模板已更新");
       setEditModal(null);
     } catch {
@@ -225,7 +230,7 @@ export default function TemplatePanel() {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-3">
-            {[1, 2, 3].map((type) => {
+            {[1, 2, 3, 4].map((type) => {
               const tpl = templates.find((t) => t.message_type === type);
               return (
                 <div
@@ -236,13 +241,21 @@ export default function TemplatePanel() {
                     <span className="text-sm font-medium text-gray-800">
                       {MESSAGE_TYPE_LABELS[type]}
                     </span>
-                    {tpl && (
+                    {tpl ? (
                       <button
                         onClick={() => openEditor(tpl)}
                         className="rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
                         title="编辑模板"
                       >
                         <Pencil size={14} />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => openEditor({ id: 0, message_type: type, template_content: "", is_active: true } as MessageTemplate)}
+                        className="text-xs text-blue-600 hover:text-blue-800"
+                        title="创建模板"
+                      >
+                        + 创建
                       </button>
                     )}
                   </div>

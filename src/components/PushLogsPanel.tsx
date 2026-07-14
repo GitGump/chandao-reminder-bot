@@ -30,8 +30,9 @@ interface PushLog {
 
 const MESSAGE_TYPE_LABELS: Record<number, string> = {
   1: "规划会提醒",
-  2: "进度更新提醒",
-  3: "发版后状态更新提醒",
+  2: "全员进度更新",
+  3: "发版后状态更新",
+  4: "部门进度更新",
 };
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {

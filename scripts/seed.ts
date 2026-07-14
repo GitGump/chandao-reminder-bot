@@ -152,7 +152,13 @@ function seedDefaults() {
         "{发版日日期}迭代已于{发版日日期-1}发版，请PM在{发版日日期}前完成发版状态更新。\n" +
         "禅道：" + ZENTAO_BASE_URL + "/execution-story-{禅道编号}.html"
     );
-    console.log("📝 消息模板: 已配置 3 条");
+    stmt.run(
+      4,
+      "【{发版日日期}进度更新提醒】@ALL\n" +
+        "各位好，{发版日日期}迭代正在进行中，请及时更新禅道需求状态。\n" +
+        "禅道：" + ZENTAO_BASE_URL + "/execution-story-{禅道编号}.html"
+    );
+    console.log("📝 消息模板: 已配置 4 条");
   }
 
   // 推送时间配置
@@ -164,7 +170,8 @@ function seedDefaults() {
     stmt.run(1, 10, 0); // 规划会提醒 10:00
     stmt.run(2, 11, 0); // 进度更新 11:00
     stmt.run(3, 9, 15); // 发版后 09:15
-    console.log("⏰ 推送时间: 已配置 3 条");
+    stmt.run(4, 10, 0); // 部门进度更新 10:00
+    console.log("⏰ 推送时间: 已配置 4 条");
   }
 
   // 禅道编号配置

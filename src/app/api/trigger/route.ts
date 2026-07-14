@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       push_source?: string;
     };
 
-    if (!message_type || ![1, 2, 3].includes(message_type)) {
+    if (!message_type || ![1, 2, 3, 4].includes(message_type)) {
       return NextResponse.json(
         { error: "Invalid message_type" },
         { status: 400 }
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
           iteration = currentIters?.[0] ?? null;
         }
       } else {
-        // 类型2: 当前活跃迭代
+        // 类型2/4: 当前活跃迭代（进度更新）
         const { data: currentIters } = await supabaseAdmin
           .from("release_calendar")
           .select("iteration_number, planning_date, release_date")
